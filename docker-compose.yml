@@ -1,0 +1,19 @@
+services:
+  ruzbot:
+    build: .
+    container_name: ruzbot
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      CHROME_EXECUTABLE_PATH: /usr/bin/chromium
+      PORT: 3000
+    ports:
+      - "${PORT:-3000}:3000"
+    volumes:
+      - ruzbot-data:/app/data
+      - ruzbot-auth:/app/.wwebjs_auth
+
+volumes:
+  ruzbot-data:
+  ruzbot-auth:

@@ -1,6 +1,6 @@
 # RuzBot
 
-RuzBot sekarang menghubungkan WhatsApp dengan gaya WhatsApp Web: jalankan program, pindai QR dari WhatsApp di ponsel, lalu sesi lokal dipakai lagi saat bot dijalankan ulang. Koneksi dibuat memakai `whatsapp-web.js`, Puppeteer, dan `LocalAuth`.
+RuzBot menyediakan dashboard web privat untuk menautkan hingga lima akun WhatsApp dengan QR seperti WhatsApp Web. Frontend dapat di-host sebagai situs statis (misalnya Vercel); backend Node.js dan Chrome harus berjalan terus di host terpisah dengan penyimpanan persisten.
 
 Library ini bukan WhatsApp Business Cloud API resmi Meta. Ia mengendalikan sesi WhatsApp Web, sehingga kompatibilitas dapat berubah saat WhatsApp Web diperbarui atau sesi perlu ditautkan ulang. Untuk layanan bisnis yang butuh dukungan API resmi, gunakan arsitektur Cloud API terpisah.
 
@@ -9,7 +9,7 @@ Library ini bukan WhatsApp Business Cloud API resmi Meta. Ia mengendalikan sesi 
 | Tahap | Status | Catatan |
 |---|---|---|
 | 1. Analisis dan arsitektur | Selesai | Pairing QR melalui WhatsApp Web dengan sesi lokal persisten. |
-| 2. Proyek dan koneksi | Implementasi siap diuji | QR tampil saat program dijalankan; pairing nyata perlu dipindai dari ponsel. |
+| 2. Proyek dan koneksi | Dashboard siap diuji | QR tampil di dashboard setelah login; pairing nyata perlu dipindai dari ponsel. |
 | 3. Handler, registry, menu | Selesai | `!help [nama]` mencari perintah dan memberi deskripsi dari registry. |
 | 4. Perintah dasar, konfigurasi, data | Fondasi selesai | `ping`, `help`, `status`, konfigurasi `.env`, izin, dan JSON store lokal. |
 | 5. AI | Belum dikonfigurasi | Tidak ada penyedia/model dan perintah AI aktif. |
@@ -37,6 +37,7 @@ ruzbot/
 │   ├── index.js
 │   ├── config/          # .env dan pengaturan client
 │   ├── whatsapp/        # client WhatsApp Web, QR, dan LocalAuth
+│   ├── web/             # server dashboard dan API privat
 │   ├── handlers/        # parsing dan dispatcher
 │   ├── commands/        # registry dan command dasar
 │   ├── services/        # pemrosesan pesan masuk
@@ -44,7 +45,10 @@ ruzbot/
 │   ├── middleware/      # izin dan batas penggunaan
 │   └── utils/           # validasi input
 ├── tests/
+├── public/              # frontend dashboard statis
 ├── data/                # file lokal, diabaikan Git
+├── Dockerfile           # backend + Chromium untuk host persisten
+├── vercel.json          # build website statis saja
 ├── .env.example
 ├── .gitignore
 ├── package.json
@@ -55,7 +59,7 @@ ruzbot/
 
 ### 1. Persyaratan
 
-- Node.js LTS 22.12+ atau 24+, VS Code, dan koneksi internet untuk pemasangan paket serta Chromium Puppeteer.
+- Node.js LTS 22.12+ atau 24+, VS Code, dan koneksi internet untuk pemasangan paket serta Chromium.
 - `npm` ikut terpasang bersama Node.js. Jika PowerShell memblokir `npm.ps1`, gunakan `npm.cmd` seperti di contoh berikut.
 
 Periksa versi:
@@ -74,7 +78,7 @@ Set-Location "C:\path\ke\ruzbot"
 npm.cmd install
 ```
 
-Paket `whatsapp-web.js` memakai Puppeteer untuk menjalankan Chromium. Instalasi awal dapat mengunduh Chromium dan memerlukan ruang serta waktu tambahan.
+Paket `whatsapp-web.js` memakai Puppeteer untuk menjalankan Chrome/Chromium. Di Windows, RuzBot otomatis mencari Chrome di lokasi umum; set `CHROME_EXECUTABLE_PATH` jika dipasang di lokasi lain.
 
 ### 4. Konfigurasi
 
@@ -82,9 +86,9 @@ Paket `whatsapp-web.js` memakai Puppeteer untuk menjalankan Chromium. Instalasi 
 Copy-Item .env.example .env
 ```
 
-Pairing QR tidak memerlukan access token, App Secret, Phone Number ID, atau webhook. `.env` hanya mengatur prefix, ID sesi, lokasi sesi, dan opsi Chrome. Jika `CHROME_EXECUTABLE_PATH` kosong, Windows otomatis mencari Google Chrome di lokasi instalasi umum; platform lain memakai Chromium yang dikelola Puppeteer. Isi path Chrome/Chromium sendiri hanya jika Chrome terpasang di lokasi khusus.
+Pairing QR tidak memerlukan access token, App Secret, Phone Number ID, atau webhook. Setelah menyalin `.env.example`, buka `.env` dan isi `DASHBOARD_PASSWORD` dengan kata sandi acak minimal 12 karakter. Untuk pemakaian lokal, biarkan `FRONTEND_ORIGIN` kosong.
 
-Sesi disimpan di `.wwebjs_auth/`. Folder ini adalah kredensial perangkat tertaut, jangan unggah atau bagikan. `.gitignore` sudah mengabaikannya.
+Sesi perangkat disimpan di `.wwebjs_auth/`, sedangkan daftar nama akun disimpan di `data/whatsapp-accounts.json`. Keduanya bersifat privat dan diabaikan Git. Jangan unggah atau bagikan folder `.wwebjs_auth/`.
 
 ### 5–6. Jalankan dan tautkan WhatsApp
 
@@ -100,9 +104,9 @@ Atau mode normal:
 npm.cmd start
 ```
 
-QR akan muncul di terminal. Pada ponsel, buka **WhatsApp → Perangkat tertaut → Tautkan perangkat**, lalu pindai QR tersebut. Tunggu sampai terminal menampilkan `RuzBot terhubung ke WhatsApp Web.` Biarkan proses tetap berjalan. `Ctrl+C` menghentikan bot. Jika sesi tersimpan, proses berikutnya biasanya tersambung tanpa QR baru.
+Buka `http://localhost:3000`, login dengan `DASHBOARD_PASSWORD`, lalu tambahkan akun. Pindai QR pada halaman melalui **WhatsApp → Perangkat tertaut → Tautkan perangkat**. Setiap akun memiliki sesi sendiri dan akan tersambung kembali saat backend dijalankan ulang. `Ctrl+C` menghentikan dashboard dan browser.
 
-Mode `dev` dan `start` sama-sama menggunakan satu proses browser; hentikan proses lama dengan `Ctrl+C` sebelum menjalankan mode lainnya. Bot ini tidak menyediakan halaman web atau endpoint `/health`.
+Mode `dev` dan `start` sama-sama menggunakan satu proses backend; jangan jalankan dua salinan sekaligus pada direktori sesi yang sama. Backend menyediakan `GET /api/health` untuk pengecekan layanan.
 
 ### 7–8. Uji dan tangani error
 
@@ -113,10 +117,11 @@ npm.cmd run check
 
 Setelah pairing siap, kirim `!ping`, `!help`, `!help ping`, atau `!status` ke akun WhatsApp yang ditautkan. Error umum:
 
-- **QR tidak muncul:** tunggu Chromium mulai; pastikan `npm.cmd install` selesai tanpa error.
+- **Dashboard meminta password:** pastikan `DASHBOARD_PASSWORD` sudah diisi di `.env`, lalu mulai ulang server.
+- **QR tidak muncul:** tunggu Chrome mulai dan periksa log backend; pastikan `npm.cmd install` selesai tanpa error.
 - **Chrome tidak ditemukan:** pastikan Google Chrome terpasang. Jika lokasinya khusus, set `CHROME_EXECUTABLE_PATH` di `.env` ke file `chrome.exe`, lalu jalankan ulang.
-- **Sesi ditolak atau rusak:** hentikan bot, hapus hanya folder `.wwebjs_auth`, jalankan ulang, lalu pindai QR baru. Menghapus folder sesi memutus tautan lokal yang tersimpan.
-- **Port 3000 terpakai:** bot versi QR tidak membuka server HTTP; pastikan tidak ada proses lama RuzBot yang masih berjalan jika ada error port dari proses lain.
+- **Frontend Vercel tidak tersambung ke API:** masukkan URL HTTPS backend di kolom **Alamat backend** dan pastikan `FRONTEND_ORIGIN` pada backend sama persis dengan origin situs Vercel.
+- **Port 3000 terpakai:** hentikan proses RuzBot lama atau ubah `PORT` di `.env`.
 - **PowerShell menolak `npm`:** gunakan `npm.cmd`.
 
 ### 9. Simpan ke GitHub dengan aman
@@ -138,16 +143,26 @@ git push -u origin main
 
 Jika folder sesi atau rahasia terlanjur ter-commit, hapus dari riwayat Git dan tautkan ulang perangkat; menghapus berkas di commit terbaru saja tidak menghapus riwayat lama.
 
-### 10. Menjalankan lokal atau server
+### 10. Website Vercel dan backend
 
-- **Lokal:** dapat dicoba tanpa biaya hosting. Komputer, internet, dan proses Node harus tetap berjalan selama bot dipakai.
-- **VPS:** butuh proses yang terus hidup, Chromium kompatibel, dan disk persisten untuk `.wwebjs_auth/`. Pastikan kebijakan host mengizinkan Chromium dan pemakaian browser otomatis. Free tier bisa sleep atau membatasi CPU, disk, serta waktu aktif.
-- **Serverless/webhook:** tidak sesuai dengan implementasi client browser persisten ini. Tidak ada webhook HTTPS yang perlu dipublikasikan.
-- **24 jam:** hanya jika host, koneksi, penyimpanan sesi, dan prosesnya mendukung uptime berkelanjutan. Tidak dijamin oleh mode lokal.
+Vercel hanya men-deploy frontend statis dari `public/`; proses Chrome/WhatsApp tidak berjalan di Vercel. Backend tetap memerlukan Node.js, Chrome, URL HTTPS publik, dan disk persisten. Di VPS yang mendukung Docker Compose, siapkan `.env` backend lalu jalankan:
+
+```powershell
+docker compose up -d --build
+docker compose logs -f
+```
+
+Compose memakai volume persisten untuk `/app/data` dan `/app/.wwebjs_auth`. Atur `DASHBOARD_PASSWORD` dan `FRONTEND_ORIGIN=https://ruzbot.vercel.app` di `.env` backend atau environment variables privat milik host; jangan masukkan rahasia ke frontend/Vercel. Arahkan domain HTTPS ke port `3000`. Jangan menghapus named volumes saat memperbarui container, atau sesi WhatsApp bisa hilang.
+
+Deploy repository yang sama ke Vercel. Konfigurasi `vercel.json` men-deploy `public/` saja dan melewati skrip unduh Chromium. Setelah situs aktif, buka dan masukkan URL HTTPS backend pada kolom **Alamat backend**, lalu login menggunakan `DASHBOARD_PASSWORD`.
+
+VPS free-tier bisa memiliki kuota, antrean kapasitas, waktu tidur, atau penyimpanan sementara. Jika host tidur atau menghapus disk, bot akan terputus atau perlu ditautkan ulang. Periksa syarat host dan pastikan penyimpanan persisten tersedia sebelum memasangkan akun utama.
 
 ## Keamanan dan batasan
 
-- `.env` dan sesi WhatsApp lokal diabaikan Git. Jangan pernah mengunggah `.wwebjs_auth/`; orang yang memperoleh sesi dapat memakai akun tertaut.
+- `.env`, daftar akun, dan sesi WhatsApp diabaikan Git. Jangan pernah mengunggah `.wwebjs_auth/`; orang yang memperoleh sesi dapat memakai akun tertaut.
+- Dashboard dilindungi kata sandi dan token admin sementara yang hanya disimpan per-tab di browser; gunakan HTTPS jika diakses lewat internet. QR yang tampil pada panel adalah kredensial sementara—jangan bagikan.
+- QR pairing web tersedia pada rilis ini; pairing dengan kode angka belum didukung. Dashboard privat ini mengelola beberapa akun dari satu admin, bukan layanan multi-user dengan akun login terpisah.
 - Handler bot tidak mencatat isi chat ke database. Namun profil Chromium di `.wwebjs_auth/` menyimpan sesi dan dapat menyimpan cache WhatsApp Web; lindungi folder itu, batasi akses komputer, dan hapus sesi/revoke perangkat saat tidak dipakai.
 - Masukan teks dibatasi 4.096 karakter dan perintah dibatasi 20 per pengirim per menit. Utilitas batas AI (5/jam) dan unduhan (3/jam) belum mengaktifkan fitur tersebut.
 - Belum ada command admin/owner, grup, AI, downloader, media, musik, anime, pencarian, NSFW, pengiriman massal, OTP, atau pengambilan akun.
@@ -160,4 +175,4 @@ npm.cmd test
 npm.cmd run check
 ```
 
-Tes mencakup parsing/prefix/alias, registry menu, izin, penanganan error, rate limit, store profil/sesi, validasi input, LocalAuth/Chromium melalui mock, alur event QR, pesan duplikat, dan pembatasan konteks grup. Tes tidak memerlukan akun atau kredensial WhatsApp. Pairing sungguhan baru terverifikasi setelah QR dipindai dan terminal menunjukkan status terhubung.
+Tes mencakup parsing/prefix/alias, registry menu, izin, penanganan error, rate limit, penyimpanan data, validasi input, LocalAuth/Chromium melalui mock, manajemen beberapa sesi, login dashboard, CORS, dan QR melalui mock. Tes tidak memerlukan akun atau kredensial WhatsApp. Pairing nyata harus diuji dengan memindai QR dari halaman dashboard.

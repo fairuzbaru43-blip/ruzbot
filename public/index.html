@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="id">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#075e54">
+    <title>RuzBot — Perangkat tertaut</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="/app.js" defer></script>
+  </head>
+  <body>
+    <main class="shell">
+      <header class="topbar">
+        <a class="brand" href="/" aria-label="RuzBot beranda">
+          <span class="brand-mark" aria-hidden="true">R</span>
+          <span>ruzbot<span class="brand-dot">.</span></span>
+        </a>
+        <span class="secure-label"><span class="secure-dot"></span> Panel privat</span>
+      </header>
+
+      <section class="intro">
+        <p class="eyebrow">DASHBOARD WHATSAPP</p>
+        <h1>Perangkat tertaut,<br><span>semudah memindai.</span></h1>
+        <p class="intro-copy">Kelola koneksi WhatsApp dan tautkan perangkat dengan QR, seperti WhatsApp Web.</p>
+      </section>
+
+      <section id="login-panel" class="panel login-panel">
+        <div class="panel-heading">
+          <div>
+            <p class="eyebrow">AKSES ADMIN</p>
+            <h2>Masuk ke RuzBot</h2>
+          </div>
+          <span class="heading-icon" aria-hidden="true">↗</span>
+        </div>
+        <form id="login-form">
+          <label for="api-url">Alamat backend</label>
+          <input id="api-url" name="apiUrl" type="url" placeholder="Kosongkan jika dibuka dari server bot" autocomplete="url" spellcheck="false">
+          <p class="field-hint">Untuk website di Vercel, masukkan URL HTTPS backend bot. Jangan masukkan URL yang tidak Anda percaya.</p>
+          <label for="password">Kata sandi admin</label>
+          <input id="password" name="password" type="password" minlength="12" autocomplete="current-password" required>
+          <button class="primary-button" type="submit">Masuk <span aria-hidden="true">→</span></button>
+        </form>
+        <p id="login-message" class="message" role="status" aria-live="polite"></p>
+      </section>
+
+      <section id="dashboard-panel" class="panel dashboard-panel" hidden>
+        <div class="panel-heading">
+          <div>
+            <p class="eyebrow">PERANGKAT TERTAUT</p>
+            <h2>Akun WhatsApp</h2>
+          </div>
+          <button id="logout-button" class="quiet-button" type="button">Keluar</button>
+        </div>
+        <p class="panel-copy">Pindai QR menggunakan WhatsApp di ponsel: <strong>Setelan → Perangkat tertaut → Tautkan perangkat.</strong></p>
+        <form id="account-form" class="add-form">
+          <label class="visually-hidden" for="account-label">Nama akun baru</label>
+          <input id="account-label" name="label" type="text" maxlength="40" placeholder="Nama akun, misalnya Toko" required>
+          <button class="primary-button" type="submit">Tambah akun <span aria-hidden="true">+</span></button>
+        </form>
+        <p id="dashboard-message" class="message" role="status" aria-live="polite"></p>
+        <div id="account-list" class="account-list" aria-live="polite"></div>
+        <p class="privacy-note"><span aria-hidden="true">◇</span> QR adalah kredensial sementara. Jangan bagikan atau tampilkan ke orang lain.</p>
+      </section>
+
+      <footer>
+        <span>RuzBot</span>
+        <span>QR pairing · Sesi tersimpan di backend</span>
+      </footer>
+    </main>
+  </body>
+</html>
