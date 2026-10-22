@@ -1,0 +1,11 @@
+.env
+.env.*
+!.env.example
+.wwebjs_auth/
+.wwebjs_cache/
+data/*.json
+data/*.tmp
+node_modules/
+npm-debug.log*
+*.log
+.vscode/
